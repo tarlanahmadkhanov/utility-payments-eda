@@ -25,8 +25,9 @@ paths:
 
         Idempotency (header `Idempotency-Key`):
         - same key, same body: the existing payment is returned again with `202` (no new event is published);
-        - same key, different body: `422`;
-        - same key while the first request is still being processed: `409` with `Retry-After`.
+          this includes concurrent duplicates: the second request waits for the first one to be recorded;
+        - same key, different body: `422`.
+        The key is scoped to the customer (`X-Customer-Id`).
 
         Known limitation: if the request fails with `500`, the payment may already be recorded
         in status `ACCEPTED`. The client should check the status with `GET /payments/{id}`.
@@ -53,8 +54,6 @@ paths:
                 $ref: '#/components/schemas/Payment'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '409':
-          $ref: '#/components/responses/RequestInProgress'
         '422':
           $ref: '#/components/responses/IdempotencyKeyReused'
         '500':
@@ -241,15 +240,6 @@ components:
             $ref: '#/components/schemas/Problem'
     NotFound:
       description: Payment not found (or it belongs to another customer).
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-    RequestInProgress:
-      description: A request with the same `Idempotency-Key` is still being processed.
-      headers:
-        Retry-After:
-          $ref: '#/components/headers/RetryAfter'
       content:
         application/problem+json:
           schema:

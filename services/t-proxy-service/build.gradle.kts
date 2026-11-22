@@ -1,11 +1,28 @@
 plugins {
     id("utility.service-conventions")
     alias(libs.plugins.openapi.generator)
+    alias(libs.plugins.jooq.docker)
 }
+
+// jOOQ and Flyway versions are managed by the Spring Boot BOM; codegen uses exactly the same versions as the runtime.
+val jooqVersion = dependencyManagement.importedProperties.getValue("jooq.version")
+val flywayVersion = dependencyManagement.importedProperties.getValue("flyway.version")
 
 dependencies {
     // Generated API interfaces and models use Jakarta Bean Validation annotations.
     implementation("org.springframework.boot:spring-boot-starter-validation")
+
+    // Persistence (ADR-0001, ADR-0003): jOOQ + Flyway on PostgreSQL.
+    implementation("org.springframework.boot:spring-boot-starter-jooq")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
+    implementation("org.flywaydb:flyway-database-postgresql")
+    runtimeOnly("org.postgresql:postgresql")
+
+    // Classpath of the jOOQ code generator: it applies the same Flyway migrations in a throwaway PostgreSQL container.
+    jooqCodegen("org.postgresql:postgresql")
+    jooqCodegen("org.jooq:jooq-codegen:$jooqVersion")
+    jooqCodegen("org.flywaydb:flyway-core:$flywayVersion")
+    jooqCodegen("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 }
 
 // Contract-first: controller interfaces and DTOs are generated from openapi.yaml.
@@ -29,12 +46,29 @@ openApiGenerate {
     )
 }
 
+// jOOQ code generation: throwaway PostgreSQL container (same major version as compose and Testcontainers, ADR-0001),
+// Flyway migrations from src/main/resources/db/migration, generated classes in build/generated-jooq.
+jooq {
+    withContainer {
+        image {
+            name = "postgres:18"
+        }
+    }
+}
+
+tasks.generateJooqClasses {
+    basePackageName.set("az.tarlan.utility.proxy.adapter.persistence.jooq")
+    schemas.set(listOf("public"))
+}
+
 sourceSets {
     main {
         java.srcDir(layout.buildDirectory.dir("generated/openapi/src/main/java"))
+        // Wired explicitly, so that the build does not depend on what the plugin does by default.
+        java.srcDir(tasks.generateJooqClasses.flatMap { it.outputDirectory })
     }
 }
 
 tasks.compileJava {
-    dependsOn(tasks.openApiGenerate)
+    dependsOn(tasks.openApiGenerate, tasks.generateJooqClasses)
 }

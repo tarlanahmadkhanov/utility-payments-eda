@@ -1,6 +1,11 @@
 spring:
   application:
     name: t-proxy-service
+  datasource:
+    # Defaults match deploy/compose/docker-compose.yml (local development only); override via environment elsewhere.
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/proxy}
+    username: ${DB_USERNAME:proxy}
+    password: ${DB_PASSWORD:proxy}
 
 server:
   port: 8081
