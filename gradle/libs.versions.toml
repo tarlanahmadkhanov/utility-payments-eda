@@ -4,6 +4,7 @@
 [versions]
 spring-boot = "4.2.0"
 spring-dependency-management = "1.1.7"
+openapi-generator = "7.27.0"
 
 [libraries]
 # Plugin artifacts as dependencies: build-logic needs them on its classpath to apply the plugins in convention plugins.
@@ -13,3 +14,4 @@ spring-dependency-management-gradle-plugin = { module = "io.spring.gradle:depend
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+openapi-generator = { id = "org.openapi.generator", version.ref = "openapi-generator" }

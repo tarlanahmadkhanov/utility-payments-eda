@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: t-proxy-service API
+  version: 0.1.0
+  description: |
+    External contract of t-proxy-service (contract-first).
+
+    The API is asynchronous: `POST /payments` only accepts a payment (`202`);
+    the outcome is obtained by polling `GET /payments/{id}` until a terminal status.
+    Statuses are derived from events of other services and may jump forward (see `PaymentStatus`).
+servers:
+  - url: http://localhost:8081
+tags:
+  - name: payments
+    description: Payment acceptance and status
+
+paths:
+  /payments:
+    post:
+      tags: [payments]
+      operationId: createPayment
+      summary: Accept a payment
+      description: |
+        Records the payment with status `ACCEPTED`, publishes `PaymentRequested`, then answers `202`.
+
+        Idempotency (header `Idempotency-Key`):
+        - same key, same body: the existing payment is returned again with `202` (no new event is published);
+        - same key, different body: `422`;
+        - same key while the first request is still being processed: `409` with `Retry-After`.
+
+        Known limitation: if the request fails with `500`, the payment may already be recorded
+        in status `ACCEPTED`. The client should check the status with `GET /payments/{id}`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CustomerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '202':
+          description: Payment accepted (or an already accepted payment returned for a repeated request).
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/RequestInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /payments/{id}:
+    get:
+      tags: [payments]
+      operationId: getPayment
+      summary: Get payment status
+      description: |
+        Returns the current payment status. `Retry-After` is returned for non-terminal statuses
+        as a hint for the polling interval. A payment of another customer is reported as `404`.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+        - $ref: '#/components/parameters/CustomerId'
+      responses:
+        '200':
+          description: Current payment state.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated unique key of the request (a UUID is recommended).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    CustomerId:
+      name: X-Customer-Id
+      in: header
+      required: true
+      description: Customer identifier (placeholder instead of authentication).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+    PaymentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  headers:
+    Location:
+      description: URL of the created (or existing) payment resource, e.g. `/payments/{id}`.
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds to wait before the next request (delta-seconds, per RFC 9110).
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required: [accountNumber, serviceType, amountMinor, currency]
+      additionalProperties: false
+      properties:
+        accountNumber:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Customer account number at the utility provider.
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Amount in minor units of the currency (e.g. qapik for AZN).
+          example: 2550
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: ISO 4217 currency code.
+          example: AZN
+
+    ServiceType:
+      type: string
+      description: Kind of utility service.
+      enum: [ELECTRICITY, WATER, GAS, HEATING, INTERNET]
+
+    PaymentStatus:
+      type: string
+      description: |
+        Payment status derived by the proxy from events of other services.
+        Main flow: `ACCEPTED` -> `FUNDS_RESERVED` -> `PARTNER_CONFIRMED` -> `COMPLETED`.
+        Failure: `FAILED`. Uncertain outcome (partner timeout): `UNKNOWN`, resolved later by reconciliation.
+        Terminal statuses: `COMPLETED`, `FAILED`. Events may arrive out of order, so a status may skip forward;
+        it never goes back and a terminal status never changes.
+      enum: [ACCEPTED, FUNDS_RESERVED, PARTNER_CONFIRMED, COMPLETED, FAILED, UNKNOWN]
+
+    Payment:
+      type: object
+      required: [paymentId, status, accountNumber, serviceType, amountMinor, currency, createdAt, updatedAt]
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        accountNumber:
+          type: string
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Problem:
+      type: object
+      description: Error model, RFC 9457 (Problem Details for HTTP APIs).
+      required: [title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          default: about:blank
+          description: URI identifying the problem type.
+        title:
+          type: string
+          description: Short, human-readable summary.
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code.
+        detail:
+          type: string
+          description: Explanation specific to this occurrence.
+        instance:
+          type: string
+          format: uri-reference
+          description: URI of the request that caused the problem.
+        errors:
+          type: array
+          description: Field-level validation errors (for `400`).
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request (validation error, missing or malformed header).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Payment not found (or it belongs to another customer).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RequestInProgress:
+      description: A request with the same `Idempotency-Key` is still being processed.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    IdempotencyKeyReused:
+      description: The `Idempotency-Key` was already used with a different request body.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalError:
+      description: |
+        Unexpected server error. The response intentionally carries no internal details.
+        The payment may already be recorded; check it with `GET /payments/{id}`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
