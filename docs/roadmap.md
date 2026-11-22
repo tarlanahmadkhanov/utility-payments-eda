@@ -4,7 +4,7 @@
 
 | # | Этап | Содержание | Статус |
 |---|---|---|---|
-| 1 | **Foundation** | ADR-0001 (стек и репо), скелеты трёх сервисов, docker compose (Kafka + Postgres), event envelope, каталог событий | в работе (скелет репозитория и `t-proxy-service`) |
+| 1 | **Foundation** | ADR-0001 (стек и репо), скелеты трёх сервисов, docker compose (Kafka + Postgres), event envelope, каталог событий | в работе (`t-proxy-service`: скелет, OpenAPI-контракт и каталог событий `docs/events.md` готовы; далее персистентность) |
 | 2 | **Happy path** | сквозной платёж proxy → wallet → rest-service → результат, статус через GET | не начат |
 | 3 | **Надёжность** | inbox/idempotency, outbox, retry/DLT | не начат |
 | 4 | **Saga** | компенсации, таймауты партнёра, неизвестный исход, reconciliation | не начат |

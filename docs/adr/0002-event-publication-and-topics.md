@@ -21,7 +21,7 @@ Proxy принимает платёж по REST, записывает его в 
 
 ### 2. Тип сообщения (D6)
 
-`PaymentRequested` — **event** (факт: платёж принят и записан), не command. Получатель proxy неизвестен; реакцию определяют подписчики (сейчас wallet).
+`PaymentRequested` — **event** (факт: платёж принят и записан), не command. Получатель proxy неизвестен; реакцию определяют подписчики (сейчас wallet и rest-service).
 
 ### 3. Топики (D8)
 
@@ -31,9 +31,9 @@ Proxy принимает платёж по REST, записывает его в 
 |---|---|---|
 | `payment.events.v1` | `t-proxy-service` | `PaymentRequested` |
 | `wallet.events.v1` | `t-wallet-service` | `FundsReserved`, `FundsReservationFailed`, `FundsCaptured`, `FundsReleased` |
-| `partner.events.v1` | `t-rest-service` | `PartnerPaymentSucceeded`, `PartnerPaymentFailed`, исход «неизвестен» (таймаут) |
+| `partner.events.v1` | `t-rest-service` | `PartnerPaymentConfirmed`, `PartnerPaymentFailed`, `PartnerPaymentOutcomeUnknown` (исход «неизвестен», таймаут) |
 
-Суффикс `v1` — версия схемы. Proxy подписывается на `wallet.events.v1` и `partner.events.v1` для обновления статуса.
+Суффикс `v1` — версия схемы. Proxy подписывается на `wallet.events.v1` и `partner.events.v1` для обновления статуса. Кроме proxy, `payment.events.v1` читают wallet (резервирование) и rest-service (копия данных платежа, D18); `wallet.events.v1` читает rest-service (`FundsReserved` — условие вызова партнёра); `partner.events.v1` читает wallet (capture или release резерва). Полная карта подписок — в `docs/events.md`.
 
 ### 4. Ключ партиционирования
 
@@ -43,12 +43,12 @@ Proxy принимает платёж по REST, записывает его в 
 
 ### 5. Envelope и формат
 
-JSON для старта; envelope содержит `eventId`, `correlationId` (равен `paymentId`), `causationId`, `occurredAt`, `type`, `version`. Классы envelope живут внутри каждого сервиса, без общей библиотеки (до появления реальной потребности).
+JSON для старта; envelope содержит `eventId`, `correlationId` (равен `paymentId`), `causationId`, `occurredAt`, `type`, `version`. Поля envelope лежат отдельно, данные события — во вложенном `payload` (D15); `causationId` равен `null` у корневых событий (D14). Классы envelope живут внутри каждого сервиса, без общей библиотеки (до появления реальной потребности). Конвенции, payload и схемы событий — в `docs/events.md`.
 
 ### 6. Входящие события и статус в proxy
 
 - Итоговый статус платежа proxy выводит сам из событий wallet и rest-service (D3); `PaymentCompleted` и `PaymentFailed` как события не публикуются.
-- Переходы статусов монотонны: допускаются «прыжки вперёд», терминальные статусы поглощающие, опоздавшее или дублирующее событие игнорируется. Применение — один условный UPDATE.
+- Переходы статусов монотонны: допускаются «прыжки вперёд», терминальные статусы поглощающие, опоздавшее или дублирующее событие игнорируется. Применение — один условный UPDATE. Промежуточные статусы включают `COMPENSATING` (D12); таблица «событие → статус» — в `docs/events.md`.
 - Событие по неизвестному `paymentId` **игнорируется с записью в лог** (до этапа 3; затем отправка в DLT) (D9).
 
 ## Рассмотренные альтернативы

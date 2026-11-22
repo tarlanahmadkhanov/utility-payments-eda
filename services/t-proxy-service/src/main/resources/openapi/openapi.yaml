@@ -161,10 +161,12 @@ components:
       description: |
         Payment status derived by the proxy from events of other services.
         Main flow: `ACCEPTED` -> `FUNDS_RESERVED` -> `PARTNER_CONFIRMED` -> `COMPLETED`.
-        Failure: `FAILED`. Uncertain outcome (partner timeout): `UNKNOWN`, resolved later by reconciliation.
+        Failure: `FAILED` (directly when funds cannot be reserved, or after the partner rejected the payment and
+        the reserve was released: `COMPENSATING` -> `FAILED`).
+        Uncertain outcome (partner timeout): `UNKNOWN`, resolved later by reconciliation.
         Terminal statuses: `COMPLETED`, `FAILED`. Events may arrive out of order, so a status may skip forward;
         it never goes back and a terminal status never changes.
-      enum: [ACCEPTED, FUNDS_RESERVED, PARTNER_CONFIRMED, COMPLETED, FAILED, UNKNOWN]
+      enum: [ACCEPTED, FUNDS_RESERVED, PARTNER_CONFIRMED, COMPENSATING, COMPLETED, FAILED, UNKNOWN]
 
     Payment:
       type: object
