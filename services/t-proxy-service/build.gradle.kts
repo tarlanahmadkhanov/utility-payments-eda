@@ -23,6 +23,10 @@ dependencies {
     jooqCodegen("org.jooq:jooq-codegen:$jooqVersion")
     jooqCodegen("org.flywaydb:flyway-core:$flywayVersion")
     jooqCodegen("org.flywaydb:flyway-database-postgresql:$flywayVersion")
+
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
 }
 
 // Contract-first: controller interfaces and DTOs are generated from openapi.yaml.
