@@ -6,11 +6,14 @@ spring-boot = "4.2.0"
 spring-dependency-management = "1.1.7"
 openapi-generator = "7.27.0"
 jooq-docker = "8.0.21"
+springdoc = "3.2.1"
 
 [libraries]
 # Plugin artifacts as dependencies: build-logic needs them on its classpath to apply the plugins in convention plugins.
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
 spring-dependency-management-gradle-plugin = { module = "io.spring.gradle:dependency-management-plugin", version.ref = "spring-dependency-management" }
+
+springdoc-openapi-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

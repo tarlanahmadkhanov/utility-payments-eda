@@ -11,7 +11,7 @@ import static az.tarlan.utility.proxy.adapter.persistence.jooq.Tables.IDEMPOTENC
 import static az.tarlan.utility.proxy.adapter.persistence.jooq.Tables.PAYMENTS;
 
 // Real PostgreSQL of the same major version as compose and jOOQ codegen (ADR-0001); Flyway applies the migrations on startup.
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = "spring.kafka.admin.auto-create=false")
 abstract class AbstractPersistenceIT {
 
     // One container for the whole test run: Spring caches the application context between test classes,

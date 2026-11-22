@@ -6,6 +6,24 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/proxy}
     username: ${DB_USERNAME:proxy}
     password: ${DB_PASSWORD:proxy}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
 
 server:
   port: 8081

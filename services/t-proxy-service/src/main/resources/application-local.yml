@@ -1,0 +1,11 @@
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    url: /openapi.yaml
+
+spring:
+  web:
+    resources:
+      static-locations: classpath:/openapi/

@@ -135,7 +135,8 @@ components:
           type: string
           minLength: 1
           maxLength: 64
-          description: Customer account number at the utility provider.
+          pattern: '^\S(.*\S)?$'
+          description: Customer account number at the utility provider. No leading or trailing whitespace.
         serviceType:
           $ref: '#/components/schemas/ServiceType'
         amountMinor:

@@ -18,6 +18,11 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
+
+    // Swagger UI over the contract-first openapi.yaml; enabled only in the local profile (D11).
+    implementation(libs.springdoc.openapi.webmvc.ui)
+
     // Classpath of the jOOQ code generator: it applies the same Flyway migrations in a throwaway PostgreSQL container.
     jooqCodegen("org.postgresql:postgresql")
     jooqCodegen("org.jooq:jooq-codegen:$jooqVersion")
@@ -27,6 +32,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("org.testcontainers:testcontainers-kafka")
 }
 
 // Contract-first: controller interfaces and DTOs are generated from openapi.yaml.
