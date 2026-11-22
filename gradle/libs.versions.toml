@@ -1,0 +1,15 @@
+# Central version catalog. Shared by the root build and by build-logic (see build-logic/settings.gradle.kts).
+# Library versions that Spring Boot manages through its BOM are intentionally not listed here.
+
+[versions]
+spring-boot = "4.2.0"
+spring-dependency-management = "1.1.7"
+
+[libraries]
+# Plugin artifacts as dependencies: build-logic needs them on its classpath to apply the plugins in convention plugins.
+spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
+spring-dependency-management-gradle-plugin = { module = "io.spring.gradle:dependency-management-plugin", version.ref = "spring-dependency-management" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

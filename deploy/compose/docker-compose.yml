@@ -1,0 +1,57 @@
+# Local infrastructure for development: Kafka (KRaft, single node) + PostgreSQL.
+# The PostgreSQL major version must match the one used for jOOQ codegen and Testcontainers (ADR-0001).
+
+name: utility-payments-eda
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: upe-postgres
+    environment:
+      POSTGRES_DB: proxy
+      POSTGRES_USER: proxy
+      POSTGRES_PASSWORD: proxy
+    ports:
+      - "5433:5432"
+    volumes:
+      # PostgreSQL 18+ images keep data in a versioned subdirectory of /var/lib/postgresql
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U proxy -d proxy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:4.3.2
+    container_name: upe-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # HOST: for applications running on the host machine (localhost:9092)
+      # DOCKER: for other containers in this compose network (kafka:9093)
+      KAFKA_LISTENERS: HOST://:9092,DOCKER://:9093,CONTROLLER://:9094
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+      # Single-node cluster: internal topics cannot be replicated
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
+volumes:
+  postgres-data:
+  kafka-data:
