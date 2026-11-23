@@ -19,6 +19,7 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     implementation("org.springframework.boot:spring-boot-starter-kafka")
+    implementation("io.micrometer:micrometer-core")
 
     // Swagger UI over the contract-first openapi.yaml; enabled only in the local profile (D11).
     implementation(libs.springdoc.openapi.webmvc.ui)
@@ -33,6 +34,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-kafka")
+    testImplementation("org.awaitility:awaitility")
 }
 
 // Contract-first: controller interfaces and DTOs are generated from openapi.yaml.

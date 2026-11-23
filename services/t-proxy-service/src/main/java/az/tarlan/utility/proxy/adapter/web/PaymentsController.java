@@ -6,7 +6,8 @@ import az.tarlan.utility.proxy.api.model.Payment;
 import az.tarlan.utility.proxy.application.AcceptPaymentCommand;
 import az.tarlan.utility.proxy.application.AcceptPaymentResult;
 import az.tarlan.utility.proxy.application.AcceptPaymentService;
-import az.tarlan.utility.proxy.application.port.PaymentRepository;
+import az.tarlan.utility.proxy.application.GetPaymentService;
+import az.tarlan.utility.proxy.config.PaymentsProperties;
 import az.tarlan.utility.proxy.domain.PaymentStatus;
 import az.tarlan.utility.proxy.domain.ServiceType;
 import org.springframework.http.HttpHeaders;
@@ -19,14 +20,15 @@ import java.util.UUID;
 @RestController
 public class PaymentsController implements PaymentsApi {
 
-    private static final String RETRY_AFTER_SECONDS = "1";
-
     private final AcceptPaymentService acceptPaymentService;
-    private final PaymentRepository paymentRepository;
+    private final GetPaymentService getPaymentService;
+    private final String retryAfterSeconds;
 
-    public PaymentsController(AcceptPaymentService acceptPaymentService, PaymentRepository paymentRepository) {
+    public PaymentsController(AcceptPaymentService acceptPaymentService, GetPaymentService getPaymentService,
+                              PaymentsProperties properties) {
         this.acceptPaymentService = acceptPaymentService;
-        this.paymentRepository = paymentRepository;
+        this.getPaymentService = getPaymentService;
+        this.retryAfterSeconds = String.valueOf(properties.retryAfter().toSeconds());
     }
 
     @Override
@@ -53,16 +55,16 @@ public class PaymentsController implements PaymentsApi {
 
     @Override
     public ResponseEntity<Payment> getPayment(UUID id, String xCustomerId) {
-        var payment = paymentRepository.findByIdAndCustomerId(id, xCustomerId)
+        var payment = getPaymentService.find(id, xCustomerId)
                 .orElseThrow(() -> new PaymentNotFoundException(id));
         ResponseEntity.BodyBuilder response = ResponseEntity.ok();
         addRetryAfter(response, payment.status());
         return response.body(PaymentApiMapper.toApi(payment));
     }
 
-    private static void addRetryAfter(ResponseEntity.BodyBuilder response, PaymentStatus status) {
+    private void addRetryAfter(ResponseEntity.BodyBuilder response, PaymentStatus status) {
         if (!status.isTerminal()) {
-            response.header(HttpHeaders.RETRY_AFTER, RETRY_AFTER_SECONDS);
+            response.header(HttpHeaders.RETRY_AFTER, retryAfterSeconds);
         }
     }
 }

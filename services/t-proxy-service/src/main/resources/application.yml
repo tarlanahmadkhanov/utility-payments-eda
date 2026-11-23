@@ -15,9 +15,16 @@ spring:
         max.block.ms: 5000
         request.timeout.ms: 5000
         delivery.timeout.ms: 10000
+    consumer:
+      group-id: t-proxy-service
+      auto-offset-reset: earliest
   jackson:
     deserialization:
       accept-float-as-int: false
+
+proxy:
+  payments:
+    retry-after: 1s
 
 springdoc:
   api-docs:

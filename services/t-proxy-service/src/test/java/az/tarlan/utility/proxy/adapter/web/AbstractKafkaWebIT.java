@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-abstract class AbstractKafkaWebIT extends AbstractWebIT {
+public abstract class AbstractKafkaWebIT extends AbstractWebIT {
 
     @ServiceConnection
     static final KafkaContainer KAFKA = new KafkaContainer("apache/kafka:4.3.2");

@@ -23,8 +23,8 @@ import static az.tarlan.utility.proxy.adapter.persistence.jooq.Tables.IDEMPOTENC
 import static az.tarlan.utility.proxy.adapter.persistence.jooq.Tables.PAYMENTS;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.kafka.admin.auto-create=false")
-abstract class AbstractWebIT {
+        properties = {"spring.kafka.admin.auto-create=false", "spring.kafka.listener.auto-startup=false"})
+public abstract class AbstractWebIT {
 
     // One PostgreSQL for the whole test run (see AbstractPersistenceIT for why).
     @ServiceConnection
@@ -48,11 +48,11 @@ abstract class AbstractWebIT {
 
     protected record Response(int status, HttpHeaders headers, String body) {
 
-        <T> T json(String path) {
+        public <T> T json(String path) {
             return JsonPath.read(body, path);
         }
 
-        boolean isProblemJson() {
+        public boolean isProblemJson() {
             MediaType contentType = headers.getContentType();
             return contentType != null && MediaType.APPLICATION_PROBLEM_JSON.isCompatibleWith(contentType);
         }
